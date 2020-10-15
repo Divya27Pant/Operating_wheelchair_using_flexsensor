@@ -1,0 +1,59 @@
+#include <ESP8266WiFi.h>
+#include "ThingSpeak.h"
+const char* ssid     = "------";
+const char* password = "-----";
+unsigned long myChannelNumber = -------;
+const char * myWriteAPIKey = "-------";
+ 
+
+const int FLEX_PIN = A0; // Pin connected to voltage divider output
+// Measure the voltage at 5V and the actual resistance of your
+// 47k resistor, and enter them below:
+const float VCC =3.3; // Measured voltage of Ardunio 5V line
+const float R_DIV =31600.0; // Measured resistance of 3.3k resistor
+
+// Upload the code, then try to adjust these values to more
+// accurately calculate bend degree.
+const float STRAIGHT_RESISTANCE =40000.0; // resistance when straight
+const float BEND_RESISTANCE =93400.0; // resistance at 90 deg
+WiFiClient WiFiclient;
+void setup() 
+{
+Serial.begin(9600);
+pinMode(FLEX_PIN, INPUT);
+pinMode(8, INPUT);
+  Serial.begin(9600);
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+   delay(500);
+   Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");  
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  ThingSpeak.begin(WiFiclient);
+}
+
+void loop() 
+{
+// Read the ADC, and calculate voltage and resistance from it
+int flexADC=analogRead(FLEX_PIN);
+float flexV=flexADC* VCC / 1023.0;
+float flexR= R_DIV * (VCC / flexV-1.0);
+Serial.println("Resistance: "+String(flexR) +" ohms");
+
+// Use the calculated resistance to estimate the sensor's
+// bend angle:
+float angle = map(flexR, STRAIGHT_RESISTANCE, BEND_RESISTANCE,
+0, 90.0);
+Serial.println("Bend: "+String(angle) +" degrees");
+Serial.println();
+
+  delay(2000);
+  ThingSpeak.setField(1,0);
+    ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+    delay(17000);
+}
